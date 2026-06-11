@@ -216,10 +216,10 @@ fn extract_response_output_text(json: &Value) -> String {
 
             if let Some(content_items) = item["content"].as_array() {
                 for content_item in content_items {
-                    if let Some(text) = content_item["text"].as_str() {
-                        if !text.trim().is_empty() {
-                            parts.push(text.to_string());
-                        }
+                    if let Some(text) = content_item["text"].as_str()
+                        && !text.trim().is_empty()
+                    {
+                        parts.push(text.to_string());
                     }
                 }
             }
@@ -240,10 +240,10 @@ fn extract_response_reasoning_summary(json: &Value) -> Option<String> {
 
             if let Some(summary_items) = item["summary"].as_array() {
                 for summary_item in summary_items {
-                    if let Some(text) = summary_item["text"].as_str() {
-                        if !text.trim().is_empty() {
-                            parts.push(text.to_string());
-                        }
+                    if let Some(text) = summary_item["text"].as_str()
+                        && !text.trim().is_empty()
+                    {
+                        parts.push(text.to_string());
                     }
                 }
             }

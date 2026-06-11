@@ -78,6 +78,7 @@ pub async fn mysql_query(config: MysqlConfig, sql: String) -> Result<MysqlResult
     let pool = mysql_async::Pool::new(opts);
     let mut conn = pool.get_conn().await.map_err(|e| e.to_string())?;
 
+    use mysql_async::prelude::*;
     let mut result = conn.query_iter(&sql).await.map_err(|e| e.to_string())?;
     let columns: Vec<String> = result
         .columns_ref()
@@ -86,12 +87,8 @@ pub async fn mysql_query(config: MysqlConfig, sql: String) -> Result<MysqlResult
         .collect();
 
     let mut rows: Vec<Vec<serde_json::Value>> = Vec::new();
-    let affected_rows;
-
-    // Try to collect as result set
-    use mysql_async::prelude::*;
     let result_rows: Vec<mysql_async::Row> = result.collect().await.map_err(|e| e.to_string())?;
-    affected_rows = result_rows.len() as u64;
+    let affected_rows = result_rows.len() as u64;
 
     for row in &result_rows {
         let mut values = Vec::new();
@@ -283,19 +280,19 @@ fn mysql_export_blocking(
 }
 
 fn find_mysqldump() -> Option<PathBuf> {
-    if let Some(path) = std::env::var_os("NALU_MYSQLDUMP_PATH").map(PathBuf::from) {
-        if is_executable_file(&path) {
-            return Some(path);
-        }
+    if let Some(path) = std::env::var_os("NALU_MYSQLDUMP_PATH").map(PathBuf::from)
+        && is_executable_file(&path)
+    {
+        return Some(path);
     }
 
-    if let Ok(executable) = std::env::current_exe() {
-        if let Some(directory) = executable.parent() {
-            for name in mysqldump_binary_names() {
-                let path = directory.join(name);
-                if is_executable_file(&path) {
-                    return Some(path);
-                }
+    if let Ok(executable) = std::env::current_exe()
+        && let Some(directory) = executable.parent()
+    {
+        for name in mysqldump_binary_names() {
+            let path = directory.join(name);
+            if is_executable_file(&path) {
+                return Some(path);
             }
         }
     }
@@ -323,7 +320,7 @@ fn mysqldump_binary_names() -> &'static [&'static str] {
 fn platform_mysqldump_candidates() -> Vec<PathBuf> {
     #[cfg(target_os = "macos")]
     {
-        return vec![
+        vec![
             "/opt/homebrew/opt/mysql-client/bin/mysqldump".into(),
             "/opt/homebrew/opt/mysql@8.4/bin/mysqldump".into(),
             "/opt/homebrew/opt/mysql@8.0/bin/mysqldump".into(),
@@ -334,7 +331,7 @@ fn platform_mysqldump_candidates() -> Vec<PathBuf> {
             "/usr/local/bin/mysqldump".into(),
             "/opt/homebrew/bin/mariadb-dump".into(),
             "/usr/local/bin/mariadb-dump".into(),
-        ];
+        ]
     }
 
     #[cfg(target_os = "windows")]

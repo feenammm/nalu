@@ -279,17 +279,16 @@ pub fn save_clipboard_image_data_url(
 
     // If the same image is already in history, return its existing path.
     // add_clipboard_entry will then update created_at and move it to the top.
-    if let Ok(db) = get_connection() {
-        if let Some(conn) = db.as_ref() {
-            if let Some(existing) = find_duplicate_image_entry_by_hash(conn, hash_bytes(&bytes))? {
-                tracing::info!(
-                    "[clipboard] duplicate image save skipped, reuse existing path: id={}, path={}",
-                    existing.id,
-                    existing.content
-                );
-                return Ok(existing.content);
-            }
-        }
+    if let Ok(db) = get_connection()
+        && let Some(conn) = db.as_ref()
+        && let Some(existing) = find_duplicate_image_entry_by_hash(conn, hash_bytes(&bytes))?
+    {
+        tracing::info!(
+            "[clipboard] duplicate image save skipped, reuse existing path: id={}, path={}",
+            existing.id,
+            existing.content
+        );
+        return Ok(existing.content);
     }
 
     let app_dir = app
@@ -579,7 +578,7 @@ fn write_file_reference_to_clipboard(content: &str, _content_type: &str) -> Resu
 fn extract_file_reference_paths(content: &str) -> Vec<String> {
     content
         .lines()
-        .map(|line| normalize_file_path(line))
+        .map(normalize_file_path)
         .filter(|path| !path.is_empty())
         .filter(|path| std::path::Path::new(path).exists())
         .collect()
@@ -588,7 +587,7 @@ fn extract_file_reference_paths(content: &str) -> Vec<String> {
 fn normalize_file_reference_content(content: &str) -> String {
     let paths = content
         .lines()
-        .map(|line| normalize_file_path(line))
+        .map(normalize_file_path)
         .filter(|path| !path.is_empty())
         .collect::<Vec<_>>();
 
@@ -616,12 +615,13 @@ fn percent_decode_path(value: &str) -> String {
     let mut i = 0;
 
     while i < bytes.len() {
-        if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let (Some(hi), Some(lo)) = (hex_value(bytes[i + 1]), hex_value(bytes[i + 2])) {
-                out.push((hi << 4) | lo);
-                i += 3;
-                continue;
-            }
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let (Some(hi), Some(lo)) = (hex_value(bytes[i + 1]), hex_value(bytes[i + 2]))
+        {
+            out.push((hi << 4) | lo);
+            i += 3;
+            continue;
         }
         out.push(bytes[i]);
         i += 1;

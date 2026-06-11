@@ -453,10 +453,10 @@ fn open_accessibility_settings() -> Result<(), String> {
 #[tauri::command]
 fn register_clipboard_shortcut(app: tauri::AppHandle, shortcut: String) -> Result<(), String> {
     // Unregister previous shortcut if any
-    if let Some(old) = CURRENT_SHORTCUT.lock().ok().and_then(|g| g.clone()) {
-        if let Ok(old_parsed) = parse_shortcut(&old) {
-            let _ = app.global_shortcut().unregister(old_parsed);
-        }
+    if let Some(old) = CURRENT_SHORTCUT.lock().ok().and_then(|g| g.clone())
+        && let Ok(old_parsed) = parse_shortcut(&old)
+    {
+        let _ = app.global_shortcut().unregister(old_parsed);
     }
 
     let parsed = parse_shortcut(&shortcut)?;
