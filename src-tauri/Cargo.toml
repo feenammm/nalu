@@ -61,7 +61,8 @@ objc2-foundation = { version = "0.3", features = ["NSString", "NSArray", "NSObje
 objc2-app-kit = { version = "0.3", features = ["NSRunningApplication", "NSWorkspace", "NSView", "NSWindow", "NSResponder", "NSApplication"] }
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "a3122e8" }
 
-# 图片处理
+# 图片处理 / 剪贴板
+[dependencies]
 arboard = "3"
 base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
