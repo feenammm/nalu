@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+/* Switch Tailwind v4 dark mode to class-based strategy (.dark on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─────────────────────────────────────────────────────────────
+   Nalu Design Tokens · shadcn-style semantic layer
+   Brand colors extracted from static/nalu-logo.png (the wave mark):
+     gradient start  #1D29BD  deep indigo
+     gradient mid    #7138ED  vivid violet   ← primary / dominant
+     gradient end    #7082F8  periwinkle
+   The violet gradient IS the brand — used for logo + hero only.
+   Solid violet carries all interactive accents.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --background: #fafafb;
+  --foreground: #1a1626;
+  --card: #ffffff;
+  --card-foreground: #1a1626;
+  --popover: #ffffff;
+  --popover-foreground: #1a1626;
+  --primary: #7138ed;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f1f6;
+  --secondary-foreground: #2a2540;
+  --muted: #f2f1f6;
+  --muted-foreground: #6b6880;
+  --accent: #f1edfd;
+  --accent-foreground: #5b2bc9;
+  --destructive: #e0364f;
+  --destructive-foreground: #ffffff;
+  --success: #18915b;
+  --warning: #c2700a;
+  --border: #e7e5ee;
+  --input: #e7e5ee;
+  --ring: #7138ed;
+  --radius: 0.75rem;
+  --brand-gradient: linear-gradient(135deg, #1d29bd 0%, #7138ed 52%, #7082f8 100%);
+}
+
+.dark {
+  --background: #16131f;
+  --foreground: #eceaf2;
+  --card: #1e1a29;
+  --card-foreground: #eceaf2;
+  --popover: #1e1a29;
+  --popover-foreground: #eceaf2;
+  --primary: #8f63f4;
+  --primary-foreground: #160b2b;
+  --secondary: #272132;
+  --secondary-foreground: #d8d4e4;
+  --muted: #272132;
+  --muted-foreground: #9c97ad;
+  --accent: #2e2442;
+  --accent-foreground: #c8b4fb;
+  --destructive: #f0556b;
+  --destructive-foreground: #160b2b;
+  --success: #34c27e;
+  --warning: #e0941f;
+  --border: #302a3d;
+  --input: #302a3d;
+  --ring: #8f63f4;
+}
+
+/* Map semantic tokens → Tailwind utilities (bg-background, text-muted-foreground, border-border, bg-primary, rounded-lg …) */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-sm: calc(var(--radius) - 0.4rem);
+  --radius-xl: calc(var(--radius) + 0.35rem);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  /* Tailwind v4 defaults interactive elements to cursor: default.
+     Restore pointer for clickable controls; keep not-allowed when disabled. */
+  button:not(:disabled),
+  summary,
+  [role="button"]:not([aria-disabled="true"]),
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
+/* Brand gradient — reserved for logo mark + hero accents only */
+.bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+.text-brand-gradient {
+  background-image: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── Smooth colour transitions for dark ↔ light ── */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    transition-property: background-color, border-color, color, fill, stroke, opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  .animate-spin,
+  .animate-pulse,
+  .animate-bounce {
+    transition-property: none;
+  }
+}
+
+/* ── Page route transitions ── */
+.page-enter-active {
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.page-leave-active {
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ── Modal / dialog transitions ── */
+.modal-enter-active {
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-leave-active {
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+.modal-enter-active > .modal-card-inner {
+  transition: opacity 0.2s cubic-bezier(0, 0, 0.2, 1) 0.05s,
+    transform 0.2s cubic-bezier(0, 0, 0.2, 1) 0.05s;
+}
+.modal-leave-active > .modal-card-inner {
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 1, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 1, 1);
+}
+.modal-enter-from > .modal-card-inner {
+  opacity: 0;
+  transform: scale(0.95) translateY(10px);
+}
+.modal-leave-to > .modal-card-inner {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+/* ── Popup slide-up transition ── */
+.popup-enter-active {
+  transition: opacity 0.2s cubic-bezier(0, 0, 0.2, 1),
+    transform 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
+.popup-leave-active {
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 1, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 1, 1);
+}
+.popup-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+}
+.popup-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}

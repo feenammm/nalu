@@ -1,0 +1,69 @@
+[package]
+name = "nalu"
+version = "0.2.2"
+description = "Nalu - Local-first personal assistant base"
+authors = ["Nalomu"]
+edition = "2024"
+license = "MIT"
+
+[lib]
+name = "nalu_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri core + plugins
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-store = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-process = "2"
+tauri-plugin-autostart = "2"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# SQLite (bundled = no system sqlite needed)
+rusqlite = { version = "0.34", features = ["bundled"] }
+
+# MySQL async client
+mysql_async = "0.34"
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client (for cloud AI API calls)
+reqwest = { version = "0.12", features = ["json"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# UUID generation
+uuid = { version = "1", features = ["v4"] }
+
+# macOS CGEvent for keyboard simulation (paste via Cmd+V)
+core-graphics = "0.24"
+
+# macOS NSPanel (non-activating floating panel for clipboard popup)
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSArray", "NSObject"] }
+objc2-app-kit = { version = "0.3", features = ["NSRunningApplication", "NSWorkspace", "NSView", "NSWindow", "NSResponder", "NSApplication"] }
+tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "a3122e8" }
+
+# 图片处理
+arboard = "3"
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
