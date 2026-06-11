@@ -53,6 +53,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # UUID generation
 uuid = { version = "1", features = ["v4"] }
 
+# Image / clipboard
+arboard = "3"
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+
 # macOS CGEvent for keyboard simulation (paste via Cmd+V)
 [target.'cfg(target_os = "macos")'.dependencies]
 core-graphics = "0.24"
@@ -60,9 +65,3 @@ objc2 = "0.6"
 objc2-foundation = { version = "0.3", features = ["NSString", "NSArray", "NSObject"] }
 objc2-app-kit = { version = "0.3", features = ["NSRunningApplication", "NSWorkspace", "NSView", "NSWindow", "NSResponder", "NSApplication"] }
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "a3122e8" }
-
-# 图片处理 / 剪贴板
-[dependencies]
-arboard = "3"
-base64 = "0.22"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
