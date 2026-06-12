@@ -3,8 +3,39 @@ export interface Task {
   project: string;
   title: string;
   done: boolean;
+  progress: number;
+  column_id: string;
+  position: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskColumn {
+  id: string;
+  project: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ColumnWithTasks {
+  column: TaskColumn;
+  tasks: Task[];
+}
+
+export interface GroupData {
+  project: string;
+  sort_order: number;
+  columns: ColumnWithTasks[];
+}
+
+export interface TaskSnapshot {
+  task: Task;
+}
+
+export interface ColumnSnapshot {
+  column: TaskColumn;
 }
 
 export interface Note {
