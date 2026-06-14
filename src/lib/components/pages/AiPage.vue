@@ -32,8 +32,18 @@ interface ContextItem {
 
 const ACTION_LABELS = {
   add_task: 'Task created',
+  add_task_to_column: 'Task created',
+  add_task_to_group: 'Task created',
   toggle_task: 'Task toggled',
+  update_task_content: 'Task updated',
+  update_task_progress: 'Progress updated',
   delete_task: 'Task deleted',
+  create_task_group: 'Group created',
+  delete_task_group: 'Group deleted',
+  copy_task_group: 'Group copied',
+  rename_task_group: 'Group renamed',
+  rename_column: 'Column renamed',
+  delete_column: 'Column deleted',
   add_note: 'Note created',
   update_note: 'Note updated',
   delete_note: 'Note deleted',

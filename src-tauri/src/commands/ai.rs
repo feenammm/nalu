@@ -273,21 +273,78 @@ The app invokes these as Tauri commands with those parameter names — do not in
 
 ## Allowed commands and their parameters
 
-### Tasks
-- add_task: Create a new task.
+### Tasks — 创建与编辑
+- add_task: Create a new task in a project's default column.
   Params: title (string, required), project (string|null, optional — null means "default")
   Example:
   [ACTION] {{"command":"add_task","params":{{"title":"Write weekly report","project":"work"}}}} [/ACTION]
 
-- toggle_task: Toggle a task's done/undone status by id.
+- add_task_to_column: Create a new task in a specific column.
+  Params: title (string, required), columnId (string, required — the UUID of the target column from app data)
+  Example:
+  [ACTION] {{"command":"add_task_to_column","params":{{"title":"Fix login bug","columnId":"a1b2-..."}}}} [/ACTION]
+
+- add_task_to_group: Create a new task in a group's first column.
+  Params: title (string, required), project (string, required — group name)
+  Example:
+  [ACTION] {{"command":"add_task_to_group","params":{{"title":"Design review","project":"work"}}}} [/ACTION]
+
+- update_task_content: Update a task's title (inline edit).
+  Params: id (string, required), title (string, required)
+  Example:
+  [ACTION] {{"command":"update_task_content","params":{{"id":"5b6f-...","title":"Write monthly report"}}}} [/ACTION]
+
+- update_task_progress: Update a task's progress percentage. progress=100 automatically marks the task as done; progress<100 marks it as not done.
+  Params: id (string, required), progress (number, required — 0 to 100)
+  Example:
+  [ACTION] {{"command":"update_task_progress","params":{{"id":"5b6f-...","progress":50}}}} [/ACTION]
+
+- toggle_task: Toggle a task's done/undone status (also syncs progress to 100 or 0).
   Params: id (string, required)
   Example:
   [ACTION] {{"command":"toggle_task","params":{{"id":"5b6f-..."}}}} [/ACTION]
 
-- delete_task: Permanently delete a task by id.
+- delete_task: Permanently delete a task by id (no undo).
   Params: id (string, required)
   Example:
   [ACTION] {{"command":"delete_task","params":{{"id":"5b6f-..."}}}} [/ACTION]
+
+### Tasks — 分组管理
+Tasks are organized in a kanban board: Groups contain Columns, and Columns contain Tasks.
+A "group" is identified by its `project` name (a string). The default group is named "default" and cannot be renamed or deleted.
+
+- create_task_group: Create a new empty group with default columns ("重要", "一般").
+  Params: project (string, required — unique group name)
+  Example:
+  [ACTION] {{"command":"create_task_group","params":{{"project":"shopping"}}}} [/ACTION]
+
+- delete_task_group: Delete a group and all its completed tasks. Fails if the group still has incomplete tasks.
+  Params: project (string, required — cannot be "default")
+  Example:
+  [ACTION] {{"command":"delete_task_group","params":{{"project":"shopping"}}}} [/ACTION]
+
+- copy_task_group: Duplicate a group, copying only its incomplete tasks.
+  Params: project (string, required)
+  Example:
+  [ACTION] {{"command":"copy_task_group","params":{{"project":"work"}}}} [/ACTION]
+
+- rename_task_group: Rename a non-default group (updates all tasks and columns under it).
+  Params: project (string, required — current name), name (string, required — new name)
+  Example:
+  [ACTION] {{"command":"rename_task_group","params":{{"project":"work","name":"office"}}}} [/ACTION]
+
+### Tasks — 分列管理
+Each group contains columns (like "重要", "一般"). Columns hold tasks and can be independently managed.
+
+- rename_column: Rename a column.
+  Params: id (string, required — column UUID), name (string, required)
+  Example:
+  [ACTION] {{"command":"rename_column","params":{{"id":"c1d2-...","name":"紧急"}}}} [/ACTION]
+
+- delete_column: Delete an empty column. Fails if the column has tasks or is the last column in its group.
+  Params: id (string, required — column UUID)
+  Example:
+  [ACTION] {{"command":"delete_column","params":{{"id":"c1d2-..."}}}} [/ACTION]
 
 ### Notes
 - add_note: Create a new note.

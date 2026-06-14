@@ -1,8 +1,8 @@
 # Nalu 实现细节与技术规范
 
-**版本**：v0.1.0 MVP  
-**日期**：2026-06-06  
-**状态**：MVP 已完成，可运行
+**版本**：v0.3.0  
+**日期**：2026-06-12  
+**状态**：MVP 已完成，看板视图已上线
 
 ---
 
@@ -14,10 +14,16 @@
 - 最近任务列表：支持直接勾选完成（toggle_task）
 - 最近笔记列表：展示标题、内容摘要、标签
 
-### 2. 任务管理（Tasks）
-- 按项目分组筛选
-- 添加/删除/切换完成状态
-- SQLite 持久化，支持 created_at / updated_at 时间戳
+### 2. 任务管理（Tasks）— 看板视图
+- **看板布局**：按分组（Group）组织，每个分组内含多列（Column），列中展示任务卡片
+- **分组管理**：默认分组 + 自定义分组，支持新建/重命名/复制/删除分组
+- **分列管理**：默认"重要"/"一般"两列，支持新建/重命名/删除分列，列之间拖拽排序
+- **任务卡片**：添加/编辑/删除/拖拽移动任务，跨列/跨分组拖拽，切换完成状态
+- **拖拽排序**：任务支持 pointer 事件拖拽（触控板/鼠标），分组也支持拖拽重排
+- **搜索过滤**：全局搜索任务标题，搜索时自动展开所有分组
+- **撤销操作**：删除任务/分列后 5 秒内可撤销
+- **进度追踪**：任务支持 0-100 进度（toggle 完成时 progress 同步为 0/100）
+- SQLite 持久化，三表关联（tasks / task_columns / task_groups）
 
 ### 3. 笔记与备忘录（Notes）
 - 双面板布局：左侧列表 + 右侧编辑器
@@ -66,10 +72,13 @@
 - 用户管理：维护 用户名-密码-数据库 表，支持同步到 MySQL 服务器
 - 用户导入/导出：JSON 文件格式，支持保存和加载
 
-### 9. AI 集成（Settings）
-- OpenAI 兼容 API 配置（DeepSeek、OpenAI、自定义）
-- API URL、API Key、Model 设置
-- 测试连接功能
+### 9. AI 助手（AiPage）
+- **多 Provider 支持**：OpenAI、DeepSeek、自定义 OpenAI 兼容 API
+- **推理模式（Reasoning）**：支持 OpenAI Responses API（reasoning enabled）和 DeepSeek thinking mode，可配置 reasoning_effort
+- **Chat UI**：Vue 多轮对话界面，支持 Tool Call 卡片展示
+- **[ACTION] 系统**：System prompt 由 Rust 后端注入应用上下文，AI 通过 `[ACTION] {"command":"xxx","params":{...}} [/ACTION]` 格式驱动应用操作（创建任务/笔记/日程/闹钟/剪贴板）
+- **模型参数配置**：API URL、API Key、Model、Temperature 可调
+- **测试连接**：设置页一键测试 API 连通性
 
 ### 10. 国际化（i18n）
 - 中文（默认）和英文双语
@@ -91,12 +100,33 @@
 数据库文件位于 `app_data_dir/nalu.db`。
 
 ```sql
--- 任务
+-- 任务（v0.3.0 增加了 progress / column_id / position）
 CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
     project TEXT NOT NULL DEFAULT 'default',
     title TEXT NOT NULL,
     done INTEGER NOT NULL DEFAULT 0,
+    progress INTEGER NOT NULL DEFAULT 0,
+    column_id TEXT NOT NULL DEFAULT '',
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 看板分列
+CREATE TABLE IF NOT EXISTS task_columns (
+    id TEXT PRIMARY KEY,
+    project TEXT NOT NULL DEFAULT 'default',
+    name TEXT NOT NULL DEFAULT '任务',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 看板分组（project 即分组标识）
+CREATE TABLE IF NOT EXISTS task_groups (
+    project TEXT PRIMARY KEY,
+    sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -163,13 +193,44 @@ CREATE TABLE IF NOT EXISTS mysql_users (
 | `db_query` | `sql: String` | `Vec<HashMap>` | 执行 SELECT 查询 |
 | `db_execute` | `sql: String` | `usize` | 执行 INSERT/UPDATE/DELETE |
 
-### Tasks
+### Tasks — 看板核心
 | 命令 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `get_tasks` | `project?: String` | `Vec<Task>` | 获取任务列表 |
-| `add_task` | `title, project?` | `Task` | 添加任务 |
-| `toggle_task` | `id` | `bool` | 切换完成状态 |
-| `delete_task` | `id` | `()` | 删除任务 |
+| `get_board` | — | `Vec<GroupData>` | 获取完整看板数据（分组→分列→任务） |
+| `move_task` | `id, target_column_id, target_position` | `Task` | 拖拽移动任务到目标列/位置 |
+| `create_column_by_drag` | `task_id, project` | `(TaskColumn, Task)` | 拖拽任务到空白区域时自动创建新列 |
+| `reorder_columns` | `column_ids: Vec<String>` | `()` | 列拖拽排序 |
+| `rename_column` | `id, name` | `TaskColumn` | 重命名列 |
+| `delete_column` | `id` | `ColumnSnapshot` | 删除空列（支持撤销），非空或最后一列报错 |
+| `restore_column` | `snapshot: ColumnSnapshot` | `TaskColumn` | 撤销删除列 |
+
+### Tasks — 分组管理
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `create_task_group` | `project` | `GroupData` | 创建新分组（自动创建默认列） |
+| `delete_task_group` | `project` | `()` | 删除分组（需无未完成任务，default 组不可删） |
+| `copy_task_group` | `project` | `GroupData` | 复制分组（仅复制未完成任务） |
+| `rename_task_group` | `project, name` | `GroupData` | 重命名分组（default 组不可改） |
+| `reorder_task_groups` | `projects: Vec<String>` | `()` | 分组拖拽排序 |
+
+### Tasks — 任务操作（看板内）
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `add_task_to_column` | `title, column_id` | `Task` | 在指定列末尾添加任务 |
+| `add_task_to_group` | `title, project` | `Task` | 在指定分组首列添加任务 |
+| `update_task_content` | `id, title` | `Task` | 内联编辑任务标题 |
+| `update_task_progress` | `id, progress` | `Task` | 更新任务进度（0-100），同步 done 字段 |
+| `delete_task_with_snapshot` | `id` | `TaskSnapshot` | 删除任务并返回快照（支持撤销） |
+| `restore_task` | `snapshot: TaskSnapshot` | `Task` | 撤销删除任务 |
+
+### Tasks — 旧版兼容命令（仍可用）
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `get_tasks` | `project?: String` | `Vec<Task>` | 获取任务列表（仪表盘/旧组件使用） |
+| `add_task` | `title, project?` | `Task` | 添加任务（自动放入首列） |
+| `toggle_task` | `id` | `bool` | 切换完成状态（同步 progress 0/100） |
+| `update_task` | `id, title` | `Task` | 更新任务标题 |
+| `delete_task` | `id` | `()` | 简单删除任务（无撤销） |
 
 ### Notes
 | 命令 | 参数 | 返回 | 说明 |
@@ -236,7 +297,25 @@ CREATE TABLE IF NOT EXISTS mysql_users (
 ### AI
 | 命令 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `ai_chat` | `config: AiConfig, messages: Vec<AiMessage>` | `AiResponse` | 发送聊天请求 |
+| `ai_chat` | `config: AiConfig, messages: Vec<AiMessage>, context: String` | `AiResponse` | 注入 system prompt + 应用上下文，发送聊天请求 |
+
+**AiConfig 结构**：
+```
+provider: "openai" | "deepseek" | "custom"
+api_key, api_url, model: String
+reasoning_enabled?: bool          // 启用推理模式（OpenAI → Responses API, DeepSeek → thinking）
+reasoning_effort?: "low"|"medium"|"high"|"max"  // 推理深度
+temperature?: f32                 // 可选温度参数
+```
+
+**AiResponse 结构**：
+```
+content: String                   // 模型输出文本
+tokens_used?: u32                 // token 消耗
+reasoning_content?: String        // 推理摘要/思考过程（DeepSeek thinking / OpenAI Responses reasoning summary）
+```
+
+**System prompt 注入**：Rust 后端根据 `context`（当前应用数据）全量拼装 system prompt，定义 [ACTION] 格式和允许的命令列表（tasks/notes/schedules/alarms/clipboard）。前端仅传消息列表，不构建 system prompt。
 
 ---
 
@@ -266,7 +345,8 @@ src/
 │   │       ├── SchedulePage.vue      # 日程管理
 │   │       ├── MysqlPage.vue         # MySQL 工具
 │   │       ├── AlarmPage.vue         # 闹钟
-│   │       └── SettingsPage.vue      # 设置（语言 + AI）
+│   │       ├── AiPage.vue            # AI 助手对话
+│   │       └── SettingsPage.vue      # 设置（语言）
 ```
 
 ### 路由策略
@@ -292,7 +372,7 @@ src-tauri/src/
 └── commands/
     ├── mod.rs                  # 模块声明
     ├── database.rs             # SQLite 通用查询
-    ├── tasks.rs                # 任务 CRUD
+    ├── tasks.rs                # 任务看板 CRUD（含分组/分列/拖拽排序 + 旧版兼容命令）
     ├── notes.rs                # 笔记 CRUD
     ├── clipboard.rs            # 剪贴板历史 CRUD
     ├── pomodoro.rs             # 番茄钟（后台 Tokio 计时器）
@@ -300,7 +380,7 @@ src-tauri/src/
     ├── alarm.rs                # 闹钟 CRUD
     ├── mysql.rs                # MySQL 连接/查询/导入导出
     ├── mysql_users.rs          # MySQL 用户管理
-    └── ai.rs                   # AI API 调用
+    └── ai.rs                   # AI 聊天（多 Provider、推理模式、system prompt 注入、[ACTION] 命令解析）
 ```
 
 ### 关键技术决策
@@ -311,6 +391,10 @@ src-tauri/src/
 4. **rusqlite 生命周期**：在有参数过滤的查询中，使用独立的 `prepare` + `query_map` 调用避免 `params!` 宏临时值生命周期问题。
 5. **MySQL 导出**：使用 `std::process::Command` 调用 `mysqldump`，不依赖 Rust 库做 dump。
 6. **音频通知**：前端使用 Web Audio API 生成 800Hz 正弦波蜂鸣音，不依赖音频文件。
+7. **看板数据加载**：`get_board` 一次性返回完整看板数据（分组→列→任务），前端通过 computed 属性过滤搜索，避免多次 IPC。
+8. **看板 schema 迁移**：数据库初始化时通过 `migrate_kanban_schema` 幂等迁移：检测旧 tasks 表缺少 progress/column_id/position 列时自动添加，兼容已有数据。
+9. **任务拖拽**：前端使用 pointer 事件（非 HTML5 DragEvent），同时兼容触控板和鼠标拖拽，移动端 WebView 也能触发。移动操作在 SQLite 事务中完成（position 重排 + 去空隙）。
+10. **撤销删除**：`delete_task_with_snapshot` / `restore_task` 和 `delete_column` / `restore_column` 通过快照模式实现 undo，前端用 5 秒 toast 提供撤销入口。
 
 ---
 
