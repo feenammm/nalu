@@ -70,6 +70,9 @@ pub fn init(path: &std::path::Path) -> Result<(), String> {
     // Run kanban board migration
     migrate_kanban_schema(&conn)?;
 
+    // Run alarm skip_next migration
+    migrate_alarm_skip_next(&conn)?;
+
     let mut db = DB.lock().map_err(|e| e.to_string())?;
     *db = Some(conn);
     Ok(())
@@ -274,6 +277,16 @@ fn migrate_existing_tasks_to_columns(conn: &Connection) -> Result<(), String> {
         }
     }
 
+    Ok(())
+}
+
+/// Idempotent migration: add skip_next column to alarms table.
+fn migrate_alarm_skip_next(conn: &Connection) -> Result<(), String> {
+    let has_column = conn.prepare("SELECT skip_next FROM alarms LIMIT 1").is_ok();
+    if !has_column {
+        conn.execute_batch("ALTER TABLE alarms ADD COLUMN skip_next INTEGER NOT NULL DEFAULT 0;")
+            .map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 

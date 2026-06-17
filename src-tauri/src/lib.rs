@@ -865,6 +865,7 @@ pub fn run() {
             commands::ai::ai_chat,
             commands::alarm::get_alarms,
             commands::alarm::add_alarm,
+            commands::alarm::skip_next_alarm,
             commands::alarm::toggle_alarm,
             commands::alarm::delete_alarm,
             update_tray_menu,

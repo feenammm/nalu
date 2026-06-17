@@ -165,6 +165,8 @@ export const en = {
     active: "Active",
     noAlarms: "No alarms. Add one above!",
     ringing: "Alarm ringing!",
+    skipNext: "Skip this",
+    cancelSkip: "Cancel skip",
     dismiss: "Dismiss",
     snooze: "Snooze",
     repeat: "Repeat",

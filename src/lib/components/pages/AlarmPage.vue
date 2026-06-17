@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { Plus, Trash2, AlarmClock, Bell, BellOff } from 'lucide-vue-next'
+import { Plus, Trash2, AlarmClock, Bell, BellOff, SkipForward } from 'lucide-vue-next'
 import type { Alarm } from '$lib/types'
 import { useI18n } from '$lib/i18n'
 import { Input } from '$lib/components/ui/input'
@@ -26,6 +26,11 @@ async function addAlarm() {
   await invoke('add_alarm', { time: newTime.value, label: newLabel.value.trim(), repeat: newRepeat.value })
   newLabel.value = ''
   newRepeat.value = 'none'
+  await loadAlarms()
+}
+
+async function skipNextAlarm(id: string) {
+  await invoke('skip_next_alarm', { id })
   await loadAlarms()
 }
 
@@ -80,6 +85,9 @@ useAiRefresh(loadAlarms)
           <div v-if="alarm.label" class="text-sm font-medium">{{ alarm.label }}</div>
           <div class="text-xs text-muted-foreground">{{ t(`alarm.repeatOptions.${alarm.repeat}`) }}</div>
         </div>
+        <button v-if="alarm.active" class="rounded-md p-2 transition-colors hover:bg-secondary" :title="alarm.skip_next ? t('alarm.cancelSkip') : t('alarm.skipNext')" @click="skipNextAlarm(alarm.id)">
+          <SkipForward class="w-4 h-4" :class="alarm.skip_next ? 'text-amber-500' : 'text-muted-foreground'" />
+        </button>
         <button class="rounded-md p-2 transition-colors hover:bg-secondary" @click="toggleAlarm(alarm.id)">
           <Bell v-if="alarm.active" class="w-4 h-4 text-primary" />
           <BellOff v-else class="w-4 h-4 text-muted-foreground" />

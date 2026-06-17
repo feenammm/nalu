@@ -70,6 +70,7 @@ export interface Alarm {
   label: string;
   repeat: string;
   active: boolean;
+  skip_next: boolean;
   created_at: string;
 }
 

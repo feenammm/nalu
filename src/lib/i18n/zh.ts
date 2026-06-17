@@ -183,6 +183,8 @@ export const zh = {
     active: "启用",
     noAlarms: "暂无闹钟，在上方添加一个吧！",
     ringing: "闹钟响了！",
+    skipNext: "跳过本次",
+    cancelSkip: "取消跳过",
     dismiss: "关闭",
     snooze: "稍后提醒",
     repeat: "重复",
