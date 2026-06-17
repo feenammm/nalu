@@ -84,6 +84,7 @@ export const en = {
     break: "Break",
     work: "Work",
     min: "min",
+    resetRounds: "Reset rounds",
     workDone: "Work session done! Time for a break.",
     breakDone: "Break is over! Back to work.",
   },

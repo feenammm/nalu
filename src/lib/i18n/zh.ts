@@ -95,6 +95,7 @@ export const zh = {
     break: "休息",
     work: "工作",
     min: "分钟",
+    resetRounds: "重置轮次",
     workDone: "工作时段结束！该休息了。",
     breakDone: "休息结束！继续工作吧。",
   },

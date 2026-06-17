@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { Play, Pause, RotateCcw, SkipForward } from 'lucide-vue-next'
+import { Play, Pause, RotateCcw, SkipForward, Eraser } from 'lucide-vue-next'
 import type { PomodoroState } from '$lib/types'
 import { useI18n } from '$lib/i18n'
 import { Input } from '$lib/components/ui/input'
@@ -40,10 +40,37 @@ async function reset() { timerState.value = await invoke('pomodoro_reset') }
 
 async function skip() { timerState.value = await invoke('pomodoro_skip') }
 
-async function setDuration() { timerState.value = await invoke('pomodoro_set_duration', { workMinutes: workMinutes.value, breakMinutes: breakMinutes.value }) }
+async function resetRounds() { timerState.value = await invoke('pomodoro_reset_rounds') }
+
+async function setDuration() {
+  timerState.value = await invoke('pomodoro_set_duration', { workMinutes: workMinutes.value, breakMinutes: breakMinutes.value })
+  saveDurations()
+}
+
+function saveDurations() {
+  try { localStorage.setItem('nalu-pomodoro-durations', JSON.stringify({ work: workMinutes.value, break: breakMinutes.value })) } catch {}
+}
+
+function loadSavedDurations() {
+  try {
+    const saved = localStorage.getItem('nalu-pomodoro-durations')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      workMinutes.value = Number(parsed.work) || 25
+      breakMinutes.value = Number(parsed.break) || 5
+    }
+  } catch {}
+}
 
 onMounted(async () => {
+  loadSavedDurations()
   await loadState()
+  // Apply saved durations to Rust state
+  const w = workMinutes.value * 60
+  const b = breakMinutes.value * 60
+  if (w !== timerState.value.work_duration || b !== timerState.value.break_duration) {
+    await setDuration()
+  }
   unlisten = await listen<number>('pomodoro-tick', ({ payload }) => { timerState.value.remaining_seconds = payload })
   unlistenWorkEnd = await listen<number>('pomodoro-work-end', () => { void loadState() })
   unlistenBreakEnd = await listen('pomodoro-break-end', () => { void loadState() })
@@ -94,7 +121,7 @@ onBeforeUnmount(() => {
         <SkipForward class="w-5 h-5" />
       </button>
     </div>
-    <div class="flex items-center justify-center gap-6 text-sm">
+    <div class="flex items-center justify-center gap-6 text-sm mb-4">
       <label class="flex items-center gap-2"><span class="text-muted-foreground">{{ t('pomodoro.work') }}</span><Input
         v-model.number="workMinutes"
         type="number"
@@ -111,6 +138,12 @@ onBeforeUnmount(() => {
         class="w-16 text-center"
         @change="setDuration"
       /><span class="text-muted-foreground">{{ t('pomodoro.min') }}</span></label>
+    </div>
+    <div class="flex items-center justify-center">
+      <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/50 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="resetRounds">
+        <Eraser class="w-3.5 h-3.5" />
+        {{ t('pomodoro.resetRounds') }}
+      </button>
     </div>
   </div>
 </template>

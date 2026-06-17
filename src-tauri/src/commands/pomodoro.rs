@@ -139,3 +139,10 @@ pub fn pomodoro_set_duration(
     }
     Ok(state.clone())
 }
+
+#[tauri::command]
+pub fn pomodoro_reset_rounds() -> Result<PomodoroState, String> {
+    let mut state = POMODORO.lock().map_err(|e| e.to_string())?;
+    state.completed_count = 0;
+    Ok(state.clone())
+}

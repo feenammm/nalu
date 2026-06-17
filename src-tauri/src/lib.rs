@@ -821,6 +821,7 @@ pub fn run() {
             commands::pomodoro::pomodoro_reset,
             commands::pomodoro::pomodoro_skip,
             commands::pomodoro::pomodoro_set_duration,
+            commands::pomodoro::pomodoro_reset_rounds,
             commands::schedule::get_schedules,
             commands::schedule::add_schedule,
             commands::schedule::toggle_schedule,
