@@ -231,7 +231,11 @@ fn copy_custom_sound(app: tauri::AppHandle, path: String) -> Result<CopiedSound,
         .join("sounds");
     std::fs::create_dir_all(&sounds_dir).map_err(|e| e.to_string())?;
 
-    let target = sounds_dir.join(format!("custom-{}.{}", uuid::Uuid::new_v4(), extension));
+    let target = sounds_dir.join(source.file_name().ok_or("invalid sound filename")?);
+    // Remove existing file to handle overwrite
+    if target.exists() {
+        std::fs::remove_file(&target).map_err(|e| e.to_string())?;
+    }
     std::fs::copy(source, &target).map_err(|e| e.to_string())?;
 
     Ok(CopiedSound {

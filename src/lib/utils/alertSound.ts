@@ -13,6 +13,7 @@ let audioCtx: AudioContext | null = null;
 let loopTimer: ReturnType<typeof setTimeout> | null = null;
 let unlocked = false;
 const activeAudio = new Set<HTMLAudioElement>();
+let oneShotAudio: HTMLAudioElement | null = null;
 
 // Generation counter — incremented on every stop().
 // Any loop whose generation doesn't match is an orphan and must self-terminate.
@@ -112,12 +113,24 @@ function playChime() {
   }
 }
 
-/** Play the chime melody once (~4 seconds). */
+/** Play the chime melody once (~4 seconds). Stops any previous one-shot before starting. */
 export function playAlertChime(choice?: SoundChoice) {
+  // Stop previous one-shot playback before starting a new one
+  if (oneShotAudio) {
+    try { oneShotAudio.pause(); oneShotAudio.currentTime = 0; } catch { /* ignore */ }
+    oneShotAudio = null;
+  }
+
   const url = resolveSoundUrl(choice);
   if (url) {
-    void playAudioUrl(url).catch((error) => {
+    const audio = new Audio(url);
+    audio.preload = "auto";
+    oneShotAudio = audio;
+    audio.addEventListener("ended", () => { if (oneShotAudio === audio) oneShotAudio = null; }, { once: true });
+    audio.addEventListener("error", () => { if (oneShotAudio === audio) oneShotAudio = null; }, { once: true });
+    void audio.play().catch((error) => {
       console.error("[alertSound] audio asset playback failed, falling back to synth:", error);
+      if (oneShotAudio === audio) oneShotAudio = null;
       playChime();
     });
     return;
